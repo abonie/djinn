@@ -7,6 +7,7 @@ module HTypes(HKind(..), HType(..), HSymbol, hTypeToFormula, pHSymbol, pHType, p
         prHSymbolOp,
         htNot, isHTUnion, getHTVars, substHT,
         HClause, HPat, HExpr(HEVar), hPrClause, termToHExpr, termToHClause, getBinderVars) where
+import Prelude hiding ((<>))
 import Text.PrettyPrint.HughesPJ(Doc, renderStyle, style, text, (<>), parens, ($$), vcat, punctuate,
          sep, fsep, nest, comma, (<+>))
 import Data.Char(isAlphaNum, isAlpha, isUpper)
@@ -32,7 +33,7 @@ data HType
         | HTTuple [HType]
         | HTArrow HType HType
         | HTUnion [(HSymbol, [HType])]          -- Only for data types; only at top level
-	| HTAbstract HSymbol HKind              -- XXX Uninterpreted type, like a variable but different kind checking
+        | HTAbstract HSymbol HKind              -- XXX Uninterpreted type, like a variable but different kind checking
         deriving (Eq)
 
 isHTUnion :: HType -> Bool
@@ -208,7 +209,7 @@ hPrClause c = renderStyle style $ ppClause 0 c
 
 ppClause :: Int -> HClause -> Doc
 ppClause _p (HClause f ps e) = text (prHSymbolOp f) <+> sep [sep (map (ppPat 10) ps) <+> text "=",
-                                               	    	     nest 2 $ ppExpr 0 e]
+                                                             nest 2 $ ppExpr 0 e]
 
 prHSymbolOp :: HSymbol -> String
 prHSymbolOp s@(c:_) | not (isAlphaNum c) = "(" ++ s ++ ")"
@@ -310,10 +311,10 @@ termToHExpr term = niceNames $ etaReduce $ remUnusedVars $ collapeCase $ fixSill
                 ps -> HPAt hs $ foldr1 combPat ps
 
         combPat p p' | p == p' = p
-	combPat (HPVar v) p = HPAt v p
-	combPat p (HPVar v) = HPAt v p
-	combPat (HPTuple ps) (HPTuple ps') = HPTuple (zipWith combPat ps ps')
-	combPat p p' = error $ "unimplemented combPat: " ++ show (p, p')
+        combPat (HPVar v) p = HPAt v p
+        combPat p (HPVar v) = HPAt v p
+        combPat (HPTuple ps) (HPTuple ps') = HPTuple (zipWith combPat ps ps')
+        combPat p p' = error $ "unimplemented combPat: " ++ show (p, p')
 
         hETuple [e] = e
         hETuple es = HETuple es
@@ -323,18 +324,18 @@ fixSillyAt :: HExpr -> HExpr
 fixSillyAt = fixAt []
   where fixAt s (HELam ps e) = HELam ps' (fixAt (concat ss ++ s) e) where (ps', ss) = unzip $ map findSilly ps
         fixAt s (HEApply f a) = HEApply (fixAt s f) (fixAt s a)
-	fixAt _ e@(HECon _) = e
-  	fixAt s e@(HEVar v) = maybe e HEVar $ lookup v s
-	fixAt s (HETuple es) = HETuple (map (fixAt s) es)
-	fixAt s (HECase e alts) = HECase (fixAt s e) (map (fixAtAlt s) alts)
-	fixAtAlt s (p, e) = (p', fixAt (s' ++ s) e) where (p', s') = findSilly p
-	findSilly p@(HPVar _) = (p, [])
-	findSilly p@(HPCon _) = (p, [])
-	findSilly (HPTuple ps) = (HPTuple ps', concat ss) where (ps', ss) = unzip $ map findSilly ps
-	findSilly (HPAt v p) = case findSilly p of
-	                       (p'@(HPVar v'), s) -> (p', (v, v'):s)
-			       (p', s) -> (HPAt v p', s)
-	findSilly (HPApply f a) = (HPApply f' a', sf ++ sa) where (f', sf) = findSilly f; (a', sa) = findSilly a
+        fixAt _ e@(HECon _) = e
+        fixAt s e@(HEVar v) = maybe e HEVar $ lookup v s
+        fixAt s (HETuple es) = HETuple (map (fixAt s) es)
+        fixAt s (HECase e alts) = HECase (fixAt s e) (map (fixAtAlt s) alts)
+        fixAtAlt s (p, e) = (p', fixAt (s' ++ s) e) where (p', s') = findSilly p
+        findSilly p@(HPVar _) = (p, [])
+        findSilly p@(HPCon _) = (p, [])
+        findSilly (HPTuple ps) = (HPTuple ps', concat ss) where (ps', ss) = unzip $ map findSilly ps
+        findSilly (HPAt v p) = case findSilly p of
+                               (p'@(HPVar v'), s) -> (p', (v, v'):s)
+                               (p', s) -> (HPAt v p', s)
+        findSilly (HPApply f a) = (HPApply f' a', sf ++ sa) where (f', sf) = findSilly f; (a', sa) = findSilly a
 
 -- XXX This shouldn't be needed.  There's similar code in hECase,
 -- but the fixSillyAt reveals new opportunities.

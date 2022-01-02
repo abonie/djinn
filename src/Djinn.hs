@@ -210,7 +210,7 @@ query prType s i ctx g =
             putStrLn $ "-- " ++ i ++ " cannot be realized."
             return (False, s)
         ps -> do
-	    let ps' = take (cutOff s) ps
+            let ps' = take (cutOff s) ps
             let score p =
                    let c = termToHClause i p
                        bvs = getBinderVars c
